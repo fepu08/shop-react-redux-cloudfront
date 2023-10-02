@@ -1,3 +1,8 @@
+# Links
+
+- manual: https://d3skv73o9ds03h.cloudfront.net/ or https://shop-react-redux-cloudfront-manual-fepu.s3.eu-central-1.amazonaws.com/index.html
+- serverless: https://d162bbrpa2xu9q.cloudfront.net/
+
 # React-shop-cloudfront
 
 This is frontend starter project for nodejs-aws mentoring program. It uses the following technologies:
