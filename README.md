@@ -1,7 +1,5 @@
 # Links
-
-- manual: https://d3skv73o9ds03h.cloudfront.net/ or https://shop-react-redux-cloudfront-manual-fepu.s3.eu-central-1.amazonaws.com/index.html
-- serverless: https://d38o6r6gkaipos.cloudfront.net and its index.html from its S3 bucket what should throw access denied https://shop-react-redux-cloudfront-fepu.s3.eu-central-1.amazonaws.com/index.html
+- http://d2zgreqv31cw9y.cloudfront.net
 
 # React-shop-cloudfront
 
