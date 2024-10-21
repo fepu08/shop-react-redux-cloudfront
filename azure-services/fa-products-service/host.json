@@ -10,6 +10,13 @@
   },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[4.*, 5.0.0)"
+    "version": "[4.*, 5.0.0)",
+    "http": {
+      "cors": {
+        "allowedOrigins": [
+          "https://stgsandfrontendne008.z16.web.core.windows.net/"
+        ]
+      }
+    }
   }
 }
