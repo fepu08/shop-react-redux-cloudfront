@@ -233,7 +233,7 @@ resource "azurerm_cosmosdb_sql_container" "stocks" {
   account_name        = azurerm_cosmosdb_account.cosmos_account.name
   database_name       = azurerm_cosmosdb_sql_database.products_app.name
   name                = "stocks"
-  partition_key_path  = "/product_id"
+  partition_key_path  = "/id"
   resource_group_name = azurerm_resource_group.product_service_rg.name
 
   # Cosmos DB supports TTL for the records

@@ -18,7 +18,7 @@ function createRandomProduct() {
  */
 function createRandomStock(product_id) {
   return {
-    product_id,
+    id: product_id,
     count: faker.number.int({ min: 1, max: 1000 }),
   };
 }
