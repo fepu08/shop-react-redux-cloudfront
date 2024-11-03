@@ -1,19 +1,32 @@
 import { AzureFunction, Context, HttpRequest } from "@azure/functions";
-import { products } from "../mock/products";
+import { ProductService } from "../services/product-service";
+import { ProductDTO } from "../dto/product-dto";
 
 const httpTrigger: AzureFunction = async function (
   context: Context,
   req: HttpRequest,
 ): Promise<void> {
-  context.log("HTTP trigger function processed a request.");
+  context.log(`Incoming request: ${JSON.stringify(req)}`);
   const productId: string = context.bindingData.productId.toString();
+
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
   };
 
+  if (productId.toLocaleLowerCase() === "total") {
+    context.log("Get total number of products");
+    const num = await ProductService.getTotalProducts();
+    context.res = {
+      headers,
+      body: num,
+    };
+    return;
+  }
+
   context.log(`Get product with ID: ${productId}`);
-  const product = products.find((p) => p.id === productId);
+  const product: ProductDTO | null =
+    await ProductService.getProductById(productId);
 
   if (product) {
     context.res = {
