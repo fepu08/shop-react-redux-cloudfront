@@ -15,13 +15,13 @@ provider "azurerm" {
 
 
 resource "azurerm_resource_group" "front_end_rg" {
-  name     = "rg-frontend-sand-ne-008"
-  location = "northeurope"
+  name     = var.resource_group_name
+  location = var.location
 }
 
 resource "azurerm_storage_account" "front_end_storage_account" {
   name                     = "stgsandfrontendne008"
-  location                 = "northeurope"
+  location                 = var.location
 
   account_replication_type = "LRS"
   account_tier             = "Standard"
@@ -34,13 +34,13 @@ resource "azurerm_storage_account" "front_end_storage_account" {
 }
 
 resource "azurerm_resource_group" "product_service_rg" {
-  location = "northeurope"
+  location = var.location
   name     = "rg-product-service-sand-ne-008"
 }
 
 resource "azurerm_storage_account" "products_service_fa" {
   name     = "stgsangproductsfane008"
-  location = "northeurope"
+  location = var.location
 
   account_replication_type = "LRS"
   account_tier             = "Standard"
@@ -58,7 +58,7 @@ resource "azurerm_storage_share" "products_service_fa" {
 
 resource "azurerm_service_plan" "product_service_plan" {
   name     = "asp-product-service-sand-ne-008"
-  location = "northeurope"
+  location = var.location
 
   os_type  = "Windows"
   sku_name = "Y1"
@@ -69,7 +69,7 @@ resource "azurerm_service_plan" "product_service_plan" {
 resource "azurerm_application_insights" "products_service_fa" {
   name             = "appins-fa-products-service-sand-ne-008"
   application_type = "web"
-  location         = "northeurope"
+  location         = var.location
 
 
   resource_group_name = azurerm_resource_group.product_service_rg.name
@@ -78,7 +78,7 @@ resource "azurerm_application_insights" "products_service_fa" {
 
 resource "azurerm_windows_function_app" "products_service" {
   name     = "fa-products-service-ne-008"
-  location = "northeurope"
+  location = var.location
 
   service_plan_id     = azurerm_service_plan.product_service_plan.id
   resource_group_name = azurerm_resource_group.product_service_rg.name
@@ -127,7 +127,7 @@ resource "azurerm_windows_function_app" "products_service" {
 }
 
 resource "azurerm_app_configuration" "products_config" {
-  location            = "northeurope"
+  location            = var.location
   name                = "appconfig-products-service-sand-ne-008"
   resource_group_name = azurerm_resource_group.product_service_rg.name
   
@@ -136,7 +136,7 @@ resource "azurerm_app_configuration" "products_config" {
 
 resource "azurerm_windows_function_app" "products_service-008" {
   name     = "fa-products-service-sand-ne-008"
-  location = "northeurope"
+  location = var.location
 
   service_plan_id     = azurerm_service_plan.product_service_plan.id
   resource_group_name = azurerm_resource_group.product_service_rg.name
@@ -181,5 +181,67 @@ resource "azurerm_windows_function_app" "products_service-008" {
       tags["hidden-link: /app-insights-resource-id"],
       tags["hidden-link: /app-insights-conn-string"]
     ]
+  }
+}
+
+# CosmosDB
+resource "azurerm_cosmosdb_account" "cosmos_account" {
+  location            = var.location
+  name                = var.cosmosdb_account_name
+  offer_type          = "Standard"
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+  kind                = "GlobalDocumentDB"
+
+  consistency_policy {
+    consistency_level = "Eventual"
+  }
+
+  capabilities {
+    name = "EnableServerless"
+  }
+
+  geo_location {
+    failover_priority = 0
+    location          = "North Europe"
+  }
+}
+
+resource "azurerm_cosmosdb_sql_database" "products_app" {
+  account_name        = azurerm_cosmosdb_account.cosmos_account.name
+  name                = "products-db"
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+}
+
+resource "azurerm_cosmosdb_sql_container" "products" {
+  account_name        = azurerm_cosmosdb_account.cosmos_account.name
+  database_name       = azurerm_cosmosdb_sql_database.products_app.name
+  name                = "products"
+  partition_key_path  = "/id"
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+
+  # Cosmos DB supports TTL for the records
+  default_ttl = -1
+
+  indexing_policy {
+    excluded_path {
+      path = "/*"
+    }
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "stocks" {
+  account_name        = azurerm_cosmosdb_account.cosmos_account.name
+  database_name       = azurerm_cosmosdb_sql_database.products_app.name
+  name                = "stocks"
+  partition_key_path  = "/id"
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+
+  # Cosmos DB supports TTL for the records
+  default_ttl = -1
+
+  indexing_policy {
+    excluded_path {
+      path = "/*"
+    }
   }
 }
