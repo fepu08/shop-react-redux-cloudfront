@@ -3,6 +3,7 @@ import {
   uploadedContainerName,
   sharedKeyCredential,
   uploadedContainerClient,
+  checkEnvVars,
 } from "../utils";
 import {
   BlobSASPermissions,
@@ -23,6 +24,8 @@ const httpTrigger: AzureFunction = async (
       };
       return;
     }
+
+    checkEnvVars();
 
     // Generate SAS token for the specified blob (file)
     const blobClient = uploadedContainerClient.getBlockBlobClient(fileName);

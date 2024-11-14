@@ -33,33 +33,6 @@ resource "azurerm_storage_account" "front_end_storage_account" {
   }
 }
 
-resource "azurerm_resource_group" "imported_files_rg" {
-  name     = var.imported_files_rg_name
-  location = var.location
-}
-
-resource "azurerm_storage_account" "imported_files_storage_account" {
-  name                     = "stgsandimportedfiles008"
-  location                 = var.location
-
-  account_replication_type = "LRS"
-  account_tier             = "Standard"
-  account_kind             = "StorageV2"
-  resource_group_name      = azurerm_resource_group.front_end_rg.name
-}
-
-resource "azurerm_storage_container" "uploaded_storage_container" {
-  name                  = "uploaded"
-  storage_account_name  = azurerm_storage_account.imported_files_storage_account.name
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "parsed_storage_container" {
-  name                  = "parsed"
-  storage_account_name  = azurerm_storage_account.imported_files_storage_account.name
-  container_access_type = "private"
-}
-
 resource "azurerm_resource_group" "product_service_rg" {
   location = var.location
   name     = "rg-product-service-sand-ne-008"
@@ -181,6 +154,18 @@ resource "azurerm_storage_share" "import_service_fa" {
   quota = 2
 
   storage_account_name = azurerm_storage_account.import_service_fa.name
+}
+
+resource "azurerm_storage_container" "uploaded_storage_container" {
+  name                  = "uploaded"
+  storage_account_name  = azurerm_storage_account.import_service_fa.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "parsed_storage_container" {
+  name                  = "parsed"
+  storage_account_name  = azurerm_storage_account.import_service_fa.name
+  container_access_type = "private"
 }
 
 resource "azurerm_service_plan" "import_service_plan" {
