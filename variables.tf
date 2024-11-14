@@ -1,7 +1,13 @@
-variable "resource_group_name" {
+variable "fe_resource_group_name" {
   description = "Resource group name"
   type        = string
 	default 		= "rg-frontend-sand-ne-008"
+}
+
+variable "imported_files_rg_name" {
+  description = "Resource group name"
+  type        = string
+	default 		= "rg-imported-files-sand-ne-008"
 }
 
 variable "location" {

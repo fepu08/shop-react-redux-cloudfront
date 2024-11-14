@@ -15,7 +15,7 @@ provider "azurerm" {
 
 
 resource "azurerm_resource_group" "front_end_rg" {
-  name     = var.resource_group_name
+  name     = var.fe_resource_group_name
   location = var.location
 }
 
@@ -31,6 +31,33 @@ resource "azurerm_storage_account" "front_end_storage_account" {
   static_website {
     index_document = "index.html"
   }
+}
+
+resource "azurerm_resource_group" "imported_files_rg" {
+  name     = var.imported_files_rg_name
+  location = var.location
+}
+
+resource "azurerm_storage_account" "imported_files_storage_account" {
+  name                     = "stgsandimportedfiles008"
+  location                 = var.location
+
+  account_replication_type = "LRS"
+  account_tier             = "Standard"
+  account_kind             = "StorageV2"
+  resource_group_name      = azurerm_resource_group.front_end_rg.name
+}
+
+resource "azurerm_storage_container" "uploaded_storage_container" {
+  name                  = "uploaded"
+  storage_account_name  = azurerm_storage_account.imported_files_storage_account.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "parsed_storage_container" {
+  name                  = "parsed"
+  storage_account_name  = azurerm_storage_account.imported_files_storage_account.name
+  container_access_type = "private"
 }
 
 resource "azurerm_resource_group" "product_service_rg" {
@@ -75,9 +102,16 @@ resource "azurerm_application_insights" "products_service_fa" {
   resource_group_name = azurerm_resource_group.product_service_rg.name
 }
 
+resource "azurerm_app_configuration" "shared_config" {
+  location            = var.location
+  name                = "appconfig-shared-config-sand-ne-008"
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+  
+  sku = "free"
+}
 
-resource "azurerm_windows_function_app" "products_service" {
-  name     = "fa-products-service-ne-008"
+resource "azurerm_windows_function_app" "products_service-008" {
+  name     = "fa-products-service-sand-ne-008"
   location = var.location
 
   service_plan_id     = azurerm_service_plan.product_service_plan.id
@@ -126,23 +160,57 @@ resource "azurerm_windows_function_app" "products_service" {
   }
 }
 
-resource "azurerm_app_configuration" "products_config" {
-  location            = var.location
-  name                = "appconfig-products-service-sand-ne-008"
-  resource_group_name = azurerm_resource_group.product_service_rg.name
-  
-  sku = "free"
+resource "azurerm_resource_group" "import_service_rg" {
+  location = var.location
+  name     = "rg-import-service-sand-ne-008"
 }
 
-resource "azurerm_windows_function_app" "products_service-008" {
-  name     = "fa-products-service-sand-ne-008"
+resource "azurerm_storage_account" "import_service_fa" {
+  name     = "stgsangimportfane008"
   location = var.location
 
-  service_plan_id     = azurerm_service_plan.product_service_plan.id
-  resource_group_name = azurerm_resource_group.product_service_rg.name
+  account_replication_type = "LRS"
+  account_tier             = "Standard"
+  account_kind             = "StorageV2"
 
-  storage_account_name       = azurerm_storage_account.products_service_fa.name
-  storage_account_access_key = azurerm_storage_account.products_service_fa.primary_access_key
+  resource_group_name = azurerm_resource_group.import_service_rg.name
+}
+
+resource "azurerm_storage_share" "import_service_fa" {
+  name  = "fa-import-service-share"
+  quota = 2
+
+  storage_account_name = azurerm_storage_account.import_service_fa.name
+}
+
+resource "azurerm_service_plan" "import_service_plan" {
+  name     = "asp-import-service-sand-ne-008"
+  location = var.location
+
+  os_type  = "Windows"
+  sku_name = "Y1"
+
+  resource_group_name = azurerm_resource_group.import_service_rg.name
+}
+
+resource "azurerm_application_insights" "import_service_fa" {
+  name             = "appins-fa-import-service-sand-ne-008"
+  application_type = "web"
+  location         = var.location
+
+
+  resource_group_name = azurerm_resource_group.import_service_rg.name
+}
+
+resource "azurerm_windows_function_app" "import_service-008" {
+  name     = "fa-import-service-sand-ne-008"
+  location = var.location
+
+  service_plan_id     = azurerm_service_plan.import_service_plan.id
+  resource_group_name = azurerm_resource_group.import_service_rg.name
+
+  storage_account_name       = azurerm_storage_account.import_service_fa.name
+  storage_account_access_key = azurerm_storage_account.import_service_fa.primary_access_key
 
   functions_extension_version = "~4"
   builtin_logging_enabled     = false
@@ -150,8 +218,8 @@ resource "azurerm_windows_function_app" "products_service-008" {
   site_config {
     always_on = false
 
-    application_insights_key               = azurerm_application_insights.products_service_fa.instrumentation_key
-    application_insights_connection_string = azurerm_application_insights.products_service_fa.connection_string
+    application_insights_key               = azurerm_application_insights.import_service_fa.instrumentation_key
+    application_insights_connection_string = azurerm_application_insights.import_service_fa.connection_string
 
     # For production systems set this to false, but consumption plan supports only 32bit workers
     use_32_bit_worker = true
@@ -167,8 +235,8 @@ resource "azurerm_windows_function_app" "products_service-008" {
   }
 
   app_settings = {
-    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = azurerm_storage_account.products_service_fa.primary_connection_string
-    WEBSITE_CONTENTSHARE                     = azurerm_storage_share.products_service_fa.name
+    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = azurerm_storage_account.import_service_fa.primary_connection_string
+    WEBSITE_CONTENTSHARE                     = azurerm_storage_share.import_service_fa.name
   }
 
   # The app settings changes cause downtime on the Function App. e.g. with Azure Function App Slots
