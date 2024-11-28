@@ -1,5 +1,6 @@
 import {
   BlobServiceClient,
+  ContainerClient,
   StorageSharedKeyCredential,
 } from "@azure/storage-blob";
 import { MissingEnvironmentVariablesError } from "../errors/MissingEnvironmentVariablesError";
@@ -13,28 +14,28 @@ const parsedContainerName =
   process.env.AZURE_STORAGE_PARSED_CONTAINER_NAME || "";
 const connectionString = process.env.AzureWebJobsStorage || "";
 
-function checkEnvVars() {
+function checkStorageEnvVars() {
   const missingEnvVars: string[] = [];
 
   if (!accountName) {
-    missingEnvVars.push("accountName");
+    missingEnvVars.push("AZURE_STORAGE_ACCOUNT_NAME");
   }
   if (!accountKey) {
-    missingEnvVars.push("accountKey");
+    missingEnvVars.push("AZURE_STORAGE_ACCOUNT_KEY");
   }
   if (!uploadedContainerName) {
-    missingEnvVars.push("containerName");
+    missingEnvVars.push("AZURE_STORAGE_UPLOADED_CONTAINER_NAME");
   }
   if (!parsedContainerName) {
-    missingEnvVars.push("parsedContainerName");
+    missingEnvVars.push("AZURE_STORAGE_PARSED_CONTAINER_NAME");
   }
   if (!connectionString) {
-    missingEnvVars.push("connectionString");
+    missingEnvVars.push("AzureWebJobsStorage");
   }
   if (missingEnvVars.length > 0) {
     throw new MissingEnvironmentVariablesError(
-      `The following environment variables are missing: ${JSON.stringify(
-        missingEnvVars
+      `The following environment variables are missing: ${missingEnvVars.join(
+        ", "
       )}`
     );
   }
@@ -42,11 +43,6 @@ function checkEnvVars() {
 
 const blobServiceClient =
   BlobServiceClient.fromConnectionString(connectionString);
-const uploadedContainerClient = blobServiceClient.getContainerClient(
-  uploadedContainerName
-);
-const parsedContainerClient =
-  blobServiceClient.getContainerClient(parsedContainerName);
 
 const sharedKeyCredential = new StorageSharedKeyCredential(
   accountName,
@@ -54,14 +50,53 @@ const sharedKeyCredential = new StorageSharedKeyCredential(
 );
 
 async function moveBlob(fileName: string, context: Context) {
-  const uploadedBlobClient =
-    uploadedContainerClient.getBlockBlobClient(fileName);
+  const uploadedContainerClient = await getUploadedContainerClient();
+  const parsedContainerClient = await getParsedContainerClient();
+
+  const uploadedBlobClient = await uploadedContainerClient.getBlockBlobClient(
+    fileName
+  );
+
   const parsedBlobClient = parsedContainerClient.getBlockBlobClient(fileName);
 
   await parsedBlobClient.beginCopyFromURL(uploadedBlobClient.url);
   context.log(`Blob copied to "parsed" container: "${fileName}"`);
   await uploadedBlobClient.delete();
   context.log(`Blob deleted from "uploaded" container: "${fileName}"`);
+}
+
+async function getContainerClient(
+  containerName: string
+): Promise<ContainerClient> {
+  const containerClient = blobServiceClient.getContainerClient(containerName);
+
+  // Check if the container already exists
+  const exists = await containerClient.exists();
+  if (exists) {
+    console.log(`Container '${containerName}' already exists.`);
+    return containerClient;
+  }
+
+  // Create the container if it does not exist
+  try {
+    await containerClient.create();
+    console.log(`Container '${containerName}' created successfully.`);
+    return containerClient;
+  } catch (error) {
+    console.error(
+      `Failed to create container '${containerName}':`,
+      error.message
+    );
+    throw error;
+  }
+}
+
+async function getUploadedContainerClient() {
+  return await getContainerClient(uploadedContainerName);
+}
+
+async function getParsedContainerClient() {
+  return await getContainerClient(parsedContainerName);
 }
 
 export {
@@ -71,8 +106,8 @@ export {
   parsedContainerName,
   sharedKeyCredential,
   blobServiceClient,
-  uploadedContainerClient,
-  parsedContainerClient,
+  getUploadedContainerClient,
+  getParsedContainerClient,
   moveBlob,
-  checkEnvVars,
+  checkStorageEnvVars,
 };

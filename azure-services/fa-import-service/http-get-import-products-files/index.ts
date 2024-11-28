@@ -2,8 +2,8 @@ import { AzureFunction, Context, HttpRequest } from "@azure/functions";
 import {
   uploadedContainerName,
   sharedKeyCredential,
-  uploadedContainerClient,
-  checkEnvVars,
+  checkStorageEnvVars,
+  getUploadedContainerClient,
 } from "../utils";
 import {
   BlobSASPermissions,
@@ -25,10 +25,12 @@ const httpTrigger: AzureFunction = async (
       return;
     }
 
-    checkEnvVars();
+    checkStorageEnvVars();
 
     // Generate SAS token for the specified blob (file)
-    const blobClient = uploadedContainerClient.getBlockBlobClient(fileName);
+    const blobClient = (await getUploadedContainerClient()).getBlockBlobClient(
+      fileName
+    );
 
     const sasExpiryDate = new Date();
     sasExpiryDate.setMinutes(sasExpiryDate.getMinutes() + 30);

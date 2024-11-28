@@ -3,6 +3,7 @@
     {
       "name": "blob",
       "type": "blobTrigger",
+      "dataType": "binary",
       "direction": "in",
       "path": "uploaded/{name}",
       "connection": "AzureWebJobsStorage"
