@@ -24,10 +24,13 @@ const httpTrigger: AzureFunction = async (
       };
       return;
     }
+    context.log("Get request with query parameter name: ", fileName);
 
+    context.log("Checking environment variables...");
     checkStorageEnvVars();
 
     // Generate SAS token for the specified blob (file)
+    context.log("Generating SAS token for the specified blob file...");
     const blobClient = (await getUploadedContainerClient()).getBlockBlobClient(
       fileName
     );
@@ -35,6 +38,7 @@ const httpTrigger: AzureFunction = async (
     const sasExpiryDate = new Date();
     sasExpiryDate.setMinutes(sasExpiryDate.getMinutes() + 30);
 
+    context.log("Generating blob SAS query parameters...");
     const sasToken = generateBlobSASQueryParameters(
       {
         containerName: uploadedContainerName,
@@ -45,7 +49,6 @@ const httpTrigger: AzureFunction = async (
       sharedKeyCredential
     ).toString();
 
-    // Construct the SAS URL with the generated token
     const sasUrl = `${blobClient.url}?${sasToken}`;
 
     context.res = {
