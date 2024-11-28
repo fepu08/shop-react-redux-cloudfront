@@ -65,6 +65,15 @@ async function moveBlob(fileName: string, context: Context) {
   context.log(`Blob deleted from "uploaded" container: "${fileName}"`);
 }
 
+async function removeBlob(fileName: string, context: Context) {
+  const uploadedContainerClient = await getUploadedContainerClient();
+  const uploadedBlobClient = await uploadedContainerClient.getBlockBlobClient(
+    fileName
+  );
+  await uploadedBlobClient.delete();
+  context.log(`Blob deleted from "uploaded" container: "${fileName}"`);
+}
+
 async function getContainerClient(
   containerName: string
 ): Promise<ContainerClient> {
@@ -109,5 +118,6 @@ export {
   getUploadedContainerClient,
   getParsedContainerClient,
   moveBlob,
+  removeBlob,
   checkStorageEnvVars,
 };

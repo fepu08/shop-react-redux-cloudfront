@@ -3,6 +3,7 @@ import {
   checkCosmosEnvVariables,
   moveBlob,
   parseCSVFromBlob,
+  removeBlob,
   uploadedContainerName,
   uploadProductFromCSV,
 } from "../utils";
@@ -39,6 +40,12 @@ const blobTrigger: AzureFunction = async function (
     await moveBlob(context.bindingData.name, context);
   } catch (error) {
     context.log.error("Error processing blob:", error);
+    try {
+      await removeBlob(context.bindingData.name, context);
+    } catch (error) {
+      context.log.error("Cannot remove blob:", context.bindingData.name);
+      context.log.error("Error processing blob:", error);
+    }
   }
 };
 

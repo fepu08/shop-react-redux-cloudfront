@@ -49,7 +49,9 @@ async function parseCSVFromBlob(
               )}, Found: ${actualHeaders.join(", ")}`
             );
             context.log.error(validationError.message);
-            readableStream.destroy(validationError);
+            //readableStream.destroy(validationError);
+            reject(validationError);
+            return;
           }
         }
       })
