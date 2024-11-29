@@ -2,9 +2,9 @@ import React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import axios from "axios";
+import API_PATHS from "../../../../../constants/apiPaths";
 
 type CSVFileImportProps = {
-  url: string;
   title: string;
 };
 
@@ -12,8 +12,9 @@ type Headers = {
   Authorization?: string;
 };
 
-export default function CSVFileImport({ url, title }: CSVFileImportProps) {
+export default function CSVFileImport({ title }: CSVFileImportProps) {
   const [file, setFile] = React.useState<File | null>(null);
+  const tokenRequestUrl = API_PATHS.import;
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -29,11 +30,14 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
 
   const uploadFile = async () => {
     if (!file) {
-      console.error("Can not find file for upload");
+      console.error("Cannot find file for upload");
       return;
     }
 
-    console.log("uploadFile to", url);
+    if (!tokenRequestUrl) {
+      console.error("Missing token request URL");
+      return;
+    }
 
     const authorization_token = localStorage.getItem("authorization_token");
     const headers: Headers = {};
@@ -43,17 +47,21 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
     }
 
     // Get the presigned URL
-    const response = await axios({
+    const presignedUrlResponse = await axios({
       method: "GET",
-      url,
+      url: tokenRequestUrl,
       params: {
         name: encodeURIComponent(file.name),
       },
       headers,
     });
+    const presignedUrl = presignedUrlResponse.data.sasUrl;
     console.log("File to upload: ", file.name);
-    console.log("Uploading to: ", response.data);
-    const result = await fetch(response.data, {
+    console.log("Uploading to: ", presignedUrl);
+    const result = await fetch(presignedUrl, {
+      headers: {
+        "x-ms-blob-type": "BlockBlob",
+      },
       method: "PUT",
       body: file,
     });
