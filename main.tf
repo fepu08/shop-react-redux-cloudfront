@@ -147,6 +147,16 @@ resource "azurerm_storage_account" "import_service_fa" {
   account_kind             = "StorageV2"
 
   resource_group_name = azurerm_resource_group.import_service_rg.name
+
+  blob_properties{
+    cors_rule{
+        allowed_headers = ["*"]
+        allowed_methods = ["PUT"]
+        allowed_origins = ["*"]
+        exposed_headers = ["*"]
+        max_age_in_seconds = 3600
+        }
+    }
 }
 
 resource "azurerm_storage_share" "import_service_fa" {
