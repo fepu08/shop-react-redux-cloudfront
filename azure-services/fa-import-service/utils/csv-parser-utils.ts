@@ -26,14 +26,14 @@ async function parseCSVFromBlob(
       }
     };
 
+    const parser = csvParser({
+      separator: ";",
+      mapHeaders: ({ header }) =>
+        header.charAt(0).toLowerCase() + header.slice(1),
+    });
+
     readableStream
-      .pipe(
-        csvParser({
-          separator: ";",
-          mapHeaders: ({ header }) =>
-            header.charAt(0).toLowerCase() + header.slice(1),
-        })
-      )
+      .pipe(parser)
       .on("headers", (headers) => {
         if (options?.validatorModel) {
           const expectedHeaders = Object.keys(options.validatorModel);
@@ -48,10 +48,7 @@ async function parseCSVFromBlob(
                 ", "
               )}, Found: ${actualHeaders.join(", ")}`
             );
-            context.log.error(validationError.message);
-            //readableStream.destroy(validationError);
-            reject(validationError);
-            return;
+            parser.destroy(validationError);
           }
         }
       })

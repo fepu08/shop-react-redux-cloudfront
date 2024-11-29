@@ -43,8 +43,11 @@ describe("parseCSVFromBlob", () => {
       isStudent: "boolean",
     };
 
-    await expect(
-      parseCSVFromBlob(Buffer.from(csvData), mockContext, { validatorModel })
+    expect(
+      async () =>
+        await parseCSVFromBlob(Buffer.from(csvData), mockContext, {
+          validatorModel,
+        })
     ).rejects.toThrow(
       "Invalid headers detected. Expected: name, age, isStudent, Found: name, gender, isStudent"
     );
