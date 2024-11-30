@@ -1,22 +1,32 @@
 import { AzureFunction, Context } from "@azure/functions";
 import {
-  checkCosmosEnvVariables,
   moveBlob,
   parseCSVFromBlob,
   removeBlob,
   uploadedContainerName,
-  uploadProductFromCSV,
 } from "../utils";
 import { ProductDTO } from "../dto/product-dto";
+import { ServiceBusClient } from "@azure/service-bus";
 
 const blobTrigger: AzureFunction = async function (
   context: Context,
   blob: any
 ): Promise<void> {
-  try {
-    context.log("Checking environment variables");
-    checkCosmosEnvVariables();
+  context.log("Invoked");
+  const serviceBusConnectionString = process.env.SERVICE_BUS_CONNECTION_STRING;
+  const queueName = process.env.SERVICE_BUS_QUEUE_NAME;
 
+  if (!serviceBusConnectionString || !queueName) {
+    context.log.error(
+      "Service Bus connection string or topic name not found in environment variables."
+    );
+    return;
+  }
+
+  const serviceBusClient = new ServiceBusClient(serviceBusConnectionString);
+  const sender = serviceBusClient.createSender(queueName);
+
+  try {
     context.log(
       `Processing file: "${context.bindingData.name}" in container: "${uploadedContainerName}"`
     );
@@ -27,15 +37,18 @@ const blobTrigger: AzureFunction = async function (
       price: "number",
       count: "number",
     };
-    const parsed = (await parseCSVFromBlob(blob, context, {
+    const parsedProducts = (await parseCSVFromBlob(blob, context, {
       validatorModel: productDTOValidatorModel,
     })) as ProductDTO[];
-    context.log("parsed", parsed);
 
-    context.log("Uploading parsed items to CosmosDB...");
-    for (let i = 0; i < parsed.length; i++) {
-      uploadProductFromCSV(parsed[i]);
-    }
+    context.log("Sending parsed items to Service Bus topic...");
+
+    await sender.sendMessages({
+      body: parsedProducts,
+      contentType: "application/json",
+    });
+
+    context.log("All products sent to Service Bus topic successfully.");
 
     await moveBlob(context.bindingData.name, context);
   } catch (error) {
