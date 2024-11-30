@@ -39,3 +39,38 @@ variable "stock_container_name" {
   type        = string
   default     = "Stock"
 }
+
+variable "unique_resource_id_prefix" {
+  type        = string
+  default     = "fepu08"
+}
+
+variable "docker_hub_username" {
+  type        = string
+  default     = "fepu08"
+}
+
+variable "docker_hub_registry_name" {
+  type        = string
+  default     = "fepu08"
+}
+
+variable "chatbot_container_name" {
+  type        = string
+  default     = "hello-world-app"
+}
+
+variable "chatbot_container_tag_dh" {
+  type        = string
+  default     = "latest"
+}
+
+variable "chatbot_container_tag_acr" {
+  type        = string
+  default     = "v1"
+}
+
+variable "docker_hub_password" {
+  type        = string
+  default     = "your password"
+}
