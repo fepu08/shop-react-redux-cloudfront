@@ -67,10 +67,11 @@ variable "chatbot_container_tag_dh" {
 
 variable "chatbot_container_tag_acr" {
   type        = string
-  default     = "v1"
+  default     = "latest"
 }
 
 variable "docker_hub_password" {
+  description = "Docker HUB password"
   type        = string
-  default     = "your password"
+  sensitive   = true
 }
