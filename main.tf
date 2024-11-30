@@ -308,3 +308,35 @@ resource "azurerm_cosmosdb_sql_container" "stocks" {
     }
   }
 }
+
+resource "azurerm_servicebus_namespace" "products_servicebus" {
+  name                = "sb-products-service-008"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.product_service_rg.name
+  sku                 = "Standard"
+}
+
+resource "azurerm_servicebus_queue" "products_queue" {
+  name           = "products-import-queue"
+  namespace_id   = azurerm_servicebus_namespace.products_servicebus.id
+}
+
+
+resource "azurerm_servicebus_topic" "products_topic" {
+  name           = "products-topic"
+  namespace_id   = azurerm_servicebus_namespace.products_servicebus.id
+}
+
+resource "azurerm_servicebus_subscription" "subscription_all" {
+  name           = "all-products"
+  max_delivery_count = 1
+  topic_id       = azurerm_servicebus_topic.products_topic.id
+}
+
+resource "azurerm_servicebus_subscription_rule" "filter_rule" {
+  name                = "filter-by-property"
+  subscription_id     = azurerm_servicebus_subscription.subscription_all.id
+
+  filter_type = "SqlFilter"
+  sql_filter  = "property = 'value'"
+}

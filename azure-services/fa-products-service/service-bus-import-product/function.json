@@ -1,0 +1,14 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "serviceBusTrigger",
+      "direction": "in",
+      "name": "queueItem",
+      "queueName": "products-import-queue",
+      "connection": "ServiceBusConnection"
+    }
+  ],
+  "entryPoint": "index",
+  "scriptFile": "../dist/service-bus-import-product/index.js"
+}

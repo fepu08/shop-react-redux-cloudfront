@@ -1,6 +1,7 @@
 import { Context } from "@azure/functions";
 import { Readable } from "stream";
-import * as csvParser from "csv-parser";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const csvParser = require("csv-parser");
 
 async function parseCSVFromBlob(
   blob: Buffer,
