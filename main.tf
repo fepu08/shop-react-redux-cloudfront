@@ -454,3 +454,58 @@ resource "azurerm_container_app" "chatbot_ca_docker_acr" {
     value = azurerm_container_registry.chatbot_acr.admin_password
   }
 }
+
+resource "azurerm_service_plan" "chatbot_app_service_plan" {
+  name                = "${var.unique_resource_id_prefix}-app-service-plan-chatbot"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  os_type             = "Linux"
+  sku_name            = "B1"
+}
+
+resource "azurerm_linux_web_app" "chatbot_app_service" {
+  name                = "${var.unique_resource_id_prefix}-chatbot-app-service"
+  location            = azurerm_resource_group.chatbot_rg.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  service_plan_id     = azurerm_service_plan.chatbot_app_service_plan.id
+
+  site_config {
+    application_stack {
+      docker_image_name               = "${var.chatbot_container_name}:${var.chatbot_container_tag_acr}"
+      docker_registry_url             = "https://${azurerm_container_registry.chatbot_acr.login_server}"
+      docker_registry_username        = azurerm_container_registry.chatbot_acr.admin_username
+      docker_registry_password        = azurerm_container_registry.chatbot_acr.admin_password
+    }
+
+    always_on                         = true
+    http2_enabled                     = true
+    minimum_tls_version               = "1.2"
+    vnet_route_all_enabled            = true
+
+    health_check_path                 = "/health"
+    health_check_eviction_time_in_min = 2
+  }
+
+  app_settings = {
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
+    "WEBSITES_PORT"                         = "3000"
+    "DOCKER_ENABLE_CI"                      = "true"
+    "DOCKER_REGISTRY_SERVER_URL"            = "https://${azurerm_container_registry.chatbot_acr.login_server}"
+    "DOCKER_REGISTRY_SERVER_USERNAME"       = azurerm_container_registry.chatbot_acr.admin_username
+    "DOCKER_REGISTRY_SERVER_PASSWORD"       = azurerm_container_registry.chatbot_acr.admin_password
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
+    "CONTAINER_REGISTRY_NAME"               = "Azure Container Registry"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_application_insights" "app_insights" {
+  name                = "${var.unique_resource_id_prefix}-appinsights"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  application_type    = "web"
+  sampling_percentage = 100
+}
