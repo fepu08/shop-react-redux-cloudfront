@@ -340,3 +340,172 @@ resource "azurerm_servicebus_subscription_rule" "filter_rule" {
   filter_type = "SqlFilter"
   sql_filter  = "property = 'value'"
 }
+
+resource "azurerm_resource_group" "chatbot_rg" {
+  name     = "${var.unique_resource_id_prefix}-rg-chatbot"
+  location = var.location
+}
+
+resource "azurerm_container_registry" "chatbot_acr" {
+  name                = "${var.unique_resource_id_prefix}chatbotacr"
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  location            = azurerm_resource_group.chatbot_rg.location
+  sku                 = "Basic"
+  admin_enabled       = true
+}
+
+resource "azurerm_log_analytics_workspace" "chatbot_log_analytics_workspace" {
+  name                = "${var.unique_resource_id_prefix}-log-analytics-chatbot"
+  location            = azurerm_resource_group.chatbot_rg.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+}
+
+resource "azurerm_container_app_environment" "chatbot_cae" {
+  name                       = "${var.unique_resource_id_prefix}-cae-chatbot"
+  location                   = azurerm_resource_group.chatbot_rg.location
+  resource_group_name        = azurerm_resource_group.chatbot_rg.name
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.chatbot_log_analytics_workspace.id
+}
+
+resource "azurerm_container_app" "chatbot_ca_docker_hub" {
+  name                         = "${var.unique_resource_id_prefix}-chatbot-ca-dh"
+  container_app_environment_id = azurerm_container_app_environment.chatbot_cae.id
+  resource_group_name          = azurerm_resource_group.chatbot_rg.name
+  revision_mode                = "Single"
+
+  registry {
+    server               = "docker.io"
+    username             = var.docker_hub_username
+    password_secret_name = "docker-io-pass"
+  }
+
+  ingress {
+    allow_insecure_connections = false
+    external_enabled           = true
+    target_port                = 3000
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+
+  }
+
+  template {
+    container {
+      name   = "${var.unique_resource_id_prefix}-chatbot-container-dh"
+      image  = "${var.docker_hub_registry_name}/${var.chatbot_container_name}:${var.chatbot_container_tag_dh}"
+      cpu    = 0.25
+      memory = "0.5Gi"
+
+      env {
+        name  = "CONTAINER_REGISTRY_NAME"
+        value = "Docker Hub"
+      }
+    }
+  }
+
+  secret {
+    name  = "docker-io-pass"
+    value = var.docker_hub_password
+  }
+}
+
+resource "azurerm_container_app" "chatbot_ca_docker_acr" {
+  name                         = "${var.unique_resource_id_prefix}-chatbot-ca-acr"
+  container_app_environment_id = azurerm_container_app_environment.chatbot_cae.id
+  resource_group_name          = azurerm_resource_group.chatbot_rg.name
+  revision_mode                = "Single"
+
+  registry {
+    server               = azurerm_container_registry.chatbot_acr.login_server
+    username             = azurerm_container_registry.chatbot_acr.admin_username
+    password_secret_name = "acr-password"
+  }
+
+  ingress {
+    allow_insecure_connections = false
+    external_enabled           = true
+    target_port                = 3000
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+
+  }
+
+  template {
+    container {
+      name   = "${var.unique_resource_id_prefix}-chatbot-container-acr"
+      image  = "${azurerm_container_registry.chatbot_acr.login_server}/${var.chatbot_container_name}:${var.chatbot_container_tag_acr}"
+      cpu    = 0.25
+      memory = "0.5Gi"
+
+      env {
+        name  = "CONTAINER_REGISTRY_NAME"
+        value = "Azure Container Registry"
+      }
+    }
+  }
+
+  secret {
+    name  = "acr-password"
+    value = azurerm_container_registry.chatbot_acr.admin_password
+  }
+}
+
+resource "azurerm_service_plan" "chatbot_app_service_plan" {
+  name                = "${var.unique_resource_id_prefix}-app-service-plan-chatbot"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  os_type             = "Linux"
+  sku_name            = "B1"
+}
+
+resource "azurerm_linux_web_app" "chatbot_app_service" {
+  name                = "${var.unique_resource_id_prefix}-chatbot-app-service"
+  location            = azurerm_resource_group.chatbot_rg.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  service_plan_id     = azurerm_service_plan.chatbot_app_service_plan.id
+
+  site_config {
+    application_stack {
+      docker_image_name               = "${var.chatbot_container_name}:${var.chatbot_container_tag_acr}"
+      docker_registry_url             = "https://${azurerm_container_registry.chatbot_acr.login_server}"
+      docker_registry_username        = azurerm_container_registry.chatbot_acr.admin_username
+      docker_registry_password        = azurerm_container_registry.chatbot_acr.admin_password
+    }
+
+    always_on                         = true
+    http2_enabled                     = true
+    minimum_tls_version               = "1.2"
+    vnet_route_all_enabled            = true
+
+    health_check_path                 = "/health"
+    health_check_eviction_time_in_min = 2
+  }
+
+  app_settings = {
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
+    "WEBSITES_PORT"                         = "3000"
+    "DOCKER_ENABLE_CI"                      = "true"
+    "DOCKER_REGISTRY_SERVER_URL"            = "https://${azurerm_container_registry.chatbot_acr.login_server}"
+    "DOCKER_REGISTRY_SERVER_USERNAME"       = azurerm_container_registry.chatbot_acr.admin_username
+    "DOCKER_REGISTRY_SERVER_PASSWORD"       = azurerm_container_registry.chatbot_acr.admin_password
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
+    "CONTAINER_REGISTRY_NAME"               = "Azure Container Registry"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_application_insights" "app_insights" {
+  name                = "${var.unique_resource_id_prefix}-appinsights"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.chatbot_rg.name
+  application_type    = "web"
+  sampling_percentage = 100
+}

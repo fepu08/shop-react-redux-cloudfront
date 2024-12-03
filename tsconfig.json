@@ -20,7 +20,7 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "exclude": ["node_modules", "dist", "azure-services"],
+  "exclude": ["node_modules", "dist", "azure-services", "simple-server-app"],
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

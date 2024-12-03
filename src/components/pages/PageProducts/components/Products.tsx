@@ -24,9 +24,17 @@ export default function Products() {
             sx={{ height: "100%", display: "flex", flexDirection: "column" }}
           >
             <CardMedia
-              sx={{ pt: "56.25%" }}
-              image={`https://source.unsplash.com/random?sig=${index}`}
+              sx={{
+                pt: "10%",
+                objectFit: "scale-down",
+                maxHeight: "200px",
+                maxWidth: "150px",
+                margin: "auto",
+                width: "auto",
+              }}
+              image={"./penguin.png"}
               title="Image title"
+              component="img"
             />
             <CardContent sx={{ flexGrow: 1 }}>
               <Typography gutterBottom variant="h5" component="h2">

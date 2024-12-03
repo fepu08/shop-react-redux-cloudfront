@@ -4,6 +4,7 @@ import Link from "@mui/material/Link";
 import Container from "@mui/material/Container";
 import Header from "~/components/MainLayout/components/Header";
 import Box from "@mui/material/Box";
+import ChatBot from "../ChatBot";
 
 function Copyright() {
   return (
@@ -26,6 +27,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <Container sx={{ pb: 8 }} maxWidth="md">
           {children}
         </Container>
+        <ChatBot />
       </main>
       <Box
         component={"footer"}
