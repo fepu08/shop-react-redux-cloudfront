@@ -1,0 +1,16 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AZURE_STORAGE_ACCOUNT_NAME": "name",
+    "AZURE_STORAGE_ACCOUNT_KEY": "key",
+    "AZURE_STORAGE_UPLOADED_CONTAINER_NAME": "uploaded",
+    "AZURE_STORAGE_PARSED_CONTAINER_NAME": "parsed",
+    "COSMOS_DB_ENDPOINT": "endpoint",
+    "COSMOS_DB_KEY": "key",
+    "SERVICE_BUS_CONNECTION_STRING": "connection_string",
+    "SERVICE_BUS_QUEUE_NAME": "products-queue"
+  }
+}
+
